@@ -63,13 +63,13 @@ fn main() {
     App::new()
         // Resources
         .insert_resource(BoidControl {
-            max_speed: 20.,
-            vision_range: 50.,
-            separation_distance: 20.,
+            max_speed: 5.,
+            vision_range: 25.,
+            separation_distance: 10.,
             separation_factor: 0.05,
             alignment_factor: 0.05,
             cohesion_factor: 0.005,
-            return_factor: 0.01,
+            return_factor: 0.001,
         })
         .register_type::<BoidControl>()
         // Plugins
@@ -113,7 +113,7 @@ fn spawn_boids(
         *mesh_handle = meshes.add(bevy::render::mesh::shape::RegularPolygon::new(5., 3).into());
     }
 
-    for _ in 0..1000 {
+    for _ in 0..2000 {
         commands.spawn((
             Boid {
                 velocity: Vec3::new(
@@ -163,23 +163,13 @@ fn apply_forces(
             + return_force;
 
         if boid.velocity.length() >= control.max_speed {
-            boid.velocity = boid.velocity.normalize() * control.max_speed;
+            boid.velocity *= 0.995;
         } else if boid.velocity.length() < control.max_speed / 5. {
             boid.velocity *= 1.005;
         }
 
         let movement_direction = boid.velocity.normalize();
-        let movement_rotation = if movement_direction.x.is_sign_negative() {
-            movement_direction.y.acos()
-        } else {
-            2. * std::f32::consts::PI - movement_direction.y.acos()
-        };
-
-        if movement_rotation.is_finite() {
-            transform.translation += boid.velocity;
-            transform.rotation = Quat::from_rotation_z(movement_rotation);
-        } else {
-            bevy::log::error!("Subnormal rotation: {:?}", boid.velocity);
-        }
+        transform.translation += boid.velocity;
+        transform.rotation = Quat::from_rotation_arc(Vec3::Y, movement_direction);
     }
 }
